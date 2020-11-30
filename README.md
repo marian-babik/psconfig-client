@@ -34,5 +34,8 @@ if __name__ == '__main__':
     # get site name of a host
     print(x.get_site('<hostname>')
 
+    # get all hosts from the mesh configs X, Y, Z and not Q
+    print(x.get_hosts_by_config('X', 'Y', 'Z', exclude='Q'))
+
 ```
 

@@ -15,15 +15,18 @@ def request(url, hostcert=None, hostkey=None, verify=False):
     return req.content
 
 
-class PSCException(Exception):
+class PSConfigParserException(Exception):
     pass
 
 
-class PSC(object):
+class PSConfig(object):
     def __init__(self, url, hostcert=None, hostkey=None, verify=False):
         self.config = list()
         req = request(url, hostcert=hostcert, hostkey=hostkey, verify=verify)
         config_st = json.loads(req)
+        self._groups_hosts = dict()
+        self._groups_tests = dict()
+        self._config_hosts = dict()
         # auto-url, mesh-config or list of mesh-configs
         if isinstance(config_st, dict):
             # mesh config or auto-url
@@ -43,8 +46,8 @@ class PSC(object):
                 hosts.add(h)
         return hosts
 
-    def _group_hosts(self):
-        groups_hosts = dict()
+    def _group_hosts_init(self):
+        # lazy init for map of groups -> hosts
         for mc in self.config:
             for k, v in mc['groups'].items():
                 if 'addresses' in v.keys():
@@ -54,17 +57,18 @@ class PSC(object):
                 elif 'b-addresses' in v.keys():
                     hosts = [h['name'] for h in v['b-addresses']]
                 else:
-                    raise PSCException('Unexpected key in groups ({})'.format(v))
-                groups_hosts[k] = hosts
-        return groups_hosts
+                    raise PSConfigParserException('Unexpected key in groups ({})'.format(v))
+                self._groups_hosts[k] = hosts
 
-    def get_hosts_by_group(self, *groups, exclude=None):
+    def get_hosts_by_group(self, *groups, **kwargs):
+        exclude = kwargs.get('exclude', None)
         if isinstance(exclude, str):
             exclude = [exclude, ]
 
-        groups_hosts = self._group_hosts()
+        if not self._groups_hosts:
+            self._group_hosts_init()
         hosts_set = set()
-        for group, hosts in groups_hosts.items():
+        for group, hosts in self._groups_hosts.items():
             if exclude and any(ex in group for ex in exclude):
                 continue
             if groups and any(g not in group for g in groups):
@@ -73,19 +77,49 @@ class PSC(object):
                 hosts_set.add(h)
         return hosts_set
 
-    def get_test_types(self, host):
-        groups_hosts = self._group_hosts()
-        groups_tests = dict()
+    def _config_hosts_init(self):
+        # lazy init for map of mesh-config -> hosts
+        for mc in self.config:
+            if '_meta' not in mc.keys():
+                continue
+            hosts = set()
+            for h in mc['hosts'].keys():
+                hosts.add(h)
+            self._config_hosts[mc['_meta']['display-name']] = hosts
+
+    def get_hosts_by_config(self, *meshes, **kwargs):
+        exclude = kwargs.get('exclude', None)
+        if isinstance(exclude, str):
+            exclude = [exclude, ]
+        if not self._config_hosts:
+            self._config_hosts_init()
+        hosts_set = set()
+        for mesh, hosts in self._config_hosts.items():
+            if exclude and any(ex in mesh for ex in exclude):
+                continue
+            if meshes and any(me not in mesh for me in meshes):
+                continue
+            for h in hosts:
+                hosts_set.add(h)
+        return hosts_set
+
+    def _groups_tests_init(self):
         for mc in self.config:
             if 'tests' not in mc.keys():
-                raise PSCException('Failed to find tests ({})'.format(mc.keys()))
+                raise PSConfigParserException('Failed to find tests ({})'.format(mc.keys()))
             for k, v in mc['tests'].items():
-                groups_tests[k] = v['type']
+                self._groups_tests[k] = v['type']
+
+    def get_test_types(self, host):
+        if not self._groups_hosts:
+            self._group_hosts_init()
+        if not self._groups_tests:
+            self._groups_tests_init()
 
         types_per_host = set()
-        for g, h in groups_hosts.items():
+        for g, h in self._groups_hosts.items():
             if host in h:
-                for g2, t in groups_tests.items():
+                for g2, t in self._groups_tests.items():
                     if g2 == g:
                         types_per_host.add(t)
         return types_per_host
@@ -94,7 +128,7 @@ class PSC(object):
         host_site = dict()
         for mc in self.config:
             if 'addresses' not in mc.keys():
-                raise PSCException('Failed to find addresses ({})'.format(mc.keys()))
+                raise PSConfigParserException('Failed to find addresses ({})'.format(mc.keys()))
             for k, v in mc['addresses'].items():
                 host_site[k] = v['_meta']['display-name']
 
