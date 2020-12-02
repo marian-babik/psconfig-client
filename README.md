@@ -36,6 +36,9 @@ if __name__ == '__main__':
 
     # get all hosts from the mesh configs X, Y, Z and not Q
     print(x.get_hosts_by_config('X', 'Y', 'Z', exclude='Q'))
+    
+    # get full map of mesh -> hosts
+    print(x.get_config_host_map())
 
 ```
 
