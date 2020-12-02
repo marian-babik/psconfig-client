@@ -52,10 +52,9 @@ class PSConfig(object):
             for k, v in mc['groups'].items():
                 if 'addresses' in v.keys():
                     hosts = [h['name'] for h in v['addresses']]
-                elif 'a-addresses' in v.keys():
+                elif 'a-addresses' in v.keys() and 'b-addresses' in v.keys():
                     hosts = [h['name'] for h in v['a-addresses']]
-                elif 'b-addresses' in v.keys():
-                    hosts = [h['name'] for h in v['b-addresses']]
+                    hosts.extend(h['name'] for h in v['b-addresses'])
                 else:
                     raise PSConfigParserException('Unexpected key in groups ({})'.format(v))
                 self._groups_hosts[k] = hosts
