@@ -87,6 +87,11 @@ class PSConfig(object):
                 hosts.add(h)
             self._config_hosts[mc['_meta']['display-name']] = hosts
 
+    def get_config_host_map(self):
+        if not self._config_hosts:
+            self._config_hosts_init()
+        return self._config_hosts.copy()
+
     def get_hosts_by_config(self, *meshes, **kwargs):
         exclude = kwargs.get('exclude', None)
         if isinstance(exclude, str):
