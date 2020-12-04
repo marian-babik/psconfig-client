@@ -15,7 +15,7 @@ if __name__ == '__main__':
     fh.setFormatter(formatter)
     log.addHandler(fh)
 
-    # url supports host auto-url, particular mesh or top level mesh directory
+    # url can be one of: host auto-url, mesh config url or top level directory that lists all available mesh configs
     # for https you can pass hostcert/key and verify flag, which are all passed to the requests library call
     x = psconfig.api.PSConfig('url', hostcert=None, hostkey=None, verify=False)
     # get all hosts from all groups
