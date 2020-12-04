@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     # url supports host auto-url, particular mesh or top level mesh directory
     # for https you can pass hostcert/key and verify flag, which are all passed to the requests library call
-    x = psconfig.api.PSC('url', hostcert=None, hostkey=None, verify=False)
+    x = psconfig.api.PSConfig('url', hostcert=None, hostkey=None, verify=False)
     # get all hosts from all groups
     print(x.get_all_hosts())
     # get all hosts from the group X
